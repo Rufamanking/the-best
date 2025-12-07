@@ -145,13 +145,14 @@
         controls.target.set(0, 0.5, 0);
         controls.update();
 
-        const ambient = new THREE.AmbientLight(0xf0f4ff, 0.25);
+        const ambient = new THREE.AmbientLight(0xf6f9ff, 0.55);
         scene.add(ambient);
 
-        const hemi = new THREE.HemisphereLight(0xf6f7fb, 0x121420, 0.9);
+        const hemi = new THREE.HemisphereLight(0xf6f7fb, 0x0b0f1d, 1.0);
+        hemi.groundColor.set(0x0b0f1d);
         scene.add(hemi);
 
-        const dir = new THREE.DirectionalLight(0xffffff, 1.15);
+        const dir = new THREE.DirectionalLight(0xffffff, 1.35);
         dir.position.set(4, 6, 3);
         dir.castShadow = true;
         dir.shadow.mapSize.set(2048, 2048);
@@ -159,109 +160,16 @@
         dir.shadow.camera.far = 15;
         scene.add(dir);
 
-        const rim = new THREE.PointLight(0xffd27f, 0.9, 12);
+        const rim = new THREE.PointLight(0xffd27f, 1.0, 14);
         rim.position.set(-3, 2.8, 2.5);
         scene.add(rim);
 
-        const ground = new THREE.Mesh(
-            new THREE.CircleGeometry(10, 96),
-            new THREE.MeshPhysicalMaterial({
-                color: 0x101528,
-                metalness: 0.18,
-                roughness: 0.55,
-                clearcoat: 0.25,
-                clearcoatRoughness: 0.5,
-                transparent: true,
-                opacity: 0.95
-            })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.12;
-        ground.receiveShadow = true;
-        scene.add(ground);
+        const fill = new THREE.PointLight(0x9acbff, 0.8, 10);
+        fill.position.set(2.2, 1.5, -2.2);
+        scene.add(fill);
 
-        function createTrophy() {
-            const metal = new THREE.MeshPhysicalMaterial({
-                color: 0xf7d046,
-                metalness: 1,
-                roughness: 0.18,
-                clearcoat: 0.6,
-                clearcoatRoughness: 0.1,
-                reflectivity: 1
-            });
-
-            const profile = [
-                new THREE.Vector2(0, 0.05),
-                new THREE.Vector2(0.5, 0),
-                new THREE.Vector2(0.55, 0.05),
-                new THREE.Vector2(0.6, 0.2),
-                new THREE.Vector2(0.62, 0.45),
-                new THREE.Vector2(0.5, 0.55),
-                new THREE.Vector2(0.35, 0.58),
-                new THREE.Vector2(0.25, 0.62),
-                new THREE.Vector2(0.2, 0.7),
-                new THREE.Vector2(0.18, 0.95),
-                new THREE.Vector2(0.1, 1.05),
-                new THREE.Vector2(0.05, 1.15)
-            ];
-
-            const cup = new THREE.Mesh(new THREE.LatheGeometry(profile, 96), metal);
-            cup.castShadow = true;
-            cup.receiveShadow = true;
-
-            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.6, 48), metal);
-            stem.position.y = -0.45;
-            stem.castShadow = true;
-            stem.receiveShadow = true;
-
-            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.28, 48), metal);
-            base.position.y = -0.9;
-            base.castShadow = true;
-            base.receiveShadow = true;
-
-            const plinth = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.52, 0.18, 48),
-                new THREE.MeshStandardMaterial({ color: 0x1f2430, metalness: 0.35, roughness: 0.7 })
-            );
-            plinth.position.y = -1.12;
-            plinth.castShadow = true;
-            plinth.receiveShadow = true;
-
-            const handleGeom = new THREE.TorusGeometry(0.38, 0.04, 24, 72, Math.PI * 0.8);
-            const handleL = new THREE.Mesh(handleGeom, metal);
-            handleL.rotation.z = Math.PI / 2;
-            handleL.position.set(-0.35, 0.65, 0);
-            handleL.castShadow = true;
-
-            const handleR = handleL.clone();
-            handleR.position.x *= -1;
-
-            const testGem = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(0.22, 1),
-                new THREE.MeshStandardMaterial({ color: 0x8fd3ff, metalness: 0.1, roughness: 0.2, emissive: 0x0a2a4f, emissiveIntensity: 0.6 })
-            );
-            testGem.position.set(0.95, 0.5, 0);
-            testGem.castShadow = true;
-
-            const group = new THREE.Group();
-            group.add(cup, stem, base, plinth, handleL, handleR, testGem);
-            group.position.y = 0.4;
-
-            return group;
-        }
-
-        const trophy = createTrophy();
-        scene.add(trophy);
-
-        // Дополнительный тестовый объект (куб) для проверки видимости
-        const testCube = new THREE.Mesh(
-            new THREE.BoxGeometry(0.35, 0.35, 0.35),
-            new THREE.MeshStandardMaterial({ color: 0xff6f61, metalness: 0.2, roughness: 0.4, emissive: 0x300a0a, emissiveIntensity: 0.4 })
-        );
-        testCube.position.set(-0.9, 0.4, 0);
-        testCube.castShadow = true;
-        testCube.receiveShadow = true;
-        scene.add(testCube);
+        const trophyPlaceholder = new THREE.Group();
+        scene.add(trophyPlaceholder); // оставляем группу, чтобы сохранять ссылки в анимации
 
         // Загрузка внешней модели кубка (GLB)
         const loader = new GLTFLoader();
@@ -281,13 +189,12 @@
                 const center = new THREE.Vector3();
                 box.getCenter(center);
                 model.position.sub(center.multiplyScalar(scale));
-                model.position.y += (size.y * scale) / 2 + 0.05; // приподнять чуть над полом
+                model.position.y += (size.y * scale) / 2 + 0.05; // приподнять чуть над плоскостью
 
                 model.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        // усилить блеск, если PBR материалы
                         if (child.material && child.material.roughness !== undefined) {
                             child.material.roughness = Math.max(0.05, child.material.roughness * 0.6);
                             child.material.metalness = Math.min(1, (child.material.metalness || 0.5) + 0.2);
@@ -297,7 +204,7 @@
 
                 model.name = "GLB_Trophy";
                 scene.add(model);
-                trophy.visible = false; // скрываем процедурный, если GLB загрузился
+                trophyPlaceholder.visible = false;
             },
             undefined,
             (err) => {
@@ -321,7 +228,7 @@
             const delta = (now - lastTime) / 1000;
             lastTime = now;
 
-            trophy.rotation.y += idleSpeed * delta;
+            trophyPlaceholder.rotation.y += idleSpeed * delta;
             controls.update();
             renderer.render(scene, camera);
         }
