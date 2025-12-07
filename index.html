@@ -90,6 +90,27 @@
             background: rgba(255, 255, 255, 0.08);
             font-weight: 600;
         }
+
+        @media (max-width: 768px) {
+            .overlay {
+                top: 14px;
+                left: 14px;
+                padding: 14px 16px;
+                max-width: 86vw;
+                font-size: 13px;
+            }
+            .overlay h1 { font-size: 18px; }
+            .overlay p { font-size: 13px; }
+            .badge { font-size: 12px; padding: 7px 10px; }
+            .hud {
+                bottom: 14px;
+                padding: 8px 12px;
+                gap: 8px;
+                font-size: 12px;
+                border-radius: 10px;
+            }
+            .key { padding: 3px 7px; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -124,49 +145,81 @@
         const container = document.getElementById("scene");
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
-        renderer.setClearColor(0x05070e, 1);
+        renderer.setClearColor(0x0a1020, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.8;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
         container.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 1.6, 3.6);
+        const camera = new THREE.PerspectiveCamera(isMobile ? 55 : 50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, isMobile ? 1.4 : 1.6, isMobile ? 3.0 : 3.6);
         camera.lookAt(0, 0.5, 0);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
-        controls.minDistance = 1.6;
-        controls.maxDistance = 6;
+        controls.minDistance = isMobile ? 1.2 : 1.6;
+        controls.maxDistance = isMobile ? 4.5 : 6;
         controls.maxPolarAngle = Math.PI / 2;
         controls.target.set(0, 0.5, 0);
         controls.update();
 
-        const ambient = new THREE.AmbientLight(0xf6f9ff, 0.55);
+        // ==================== ОСВЕЩЕНИЕ ====================
+        // Высокий ambient для базовой видимости
+        const ambient = new THREE.AmbientLight(0xffffff, 1.5);
         scene.add(ambient);
 
-        const hemi = new THREE.HemisphereLight(0xf6f7fb, 0x0b0f1d, 1.0);
-        hemi.groundColor.set(0x0b0f1d);
+        // Hemisphere для мягкого градиента небо/земля
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 1.0);
         scene.add(hemi);
 
-        const dir = new THREE.DirectionalLight(0xffffff, 1.35);
-        dir.position.set(4, 6, 3);
-        dir.castShadow = true;
-        dir.shadow.mapSize.set(2048, 2048);
-        dir.shadow.camera.near = 1;
-        dir.shadow.camera.far = 15;
-        scene.add(dir);
+        // Центр модели для направления света
+        const modelCenter = new THREE.Object3D();
+        modelCenter.position.set(0, 0.8, 0);
+        scene.add(modelCenter);
 
-        const rim = new THREE.PointLight(0xffd27f, 1.0, 14);
-        rim.position.set(-3, 2.8, 2.5);
-        scene.add(rim);
+        // Key light - основной слева-спереди (45°)
+        const keyLight = new THREE.SpotLight(0xffffff, 80);
+        keyLight.position.set(-3, 4, 3);
+        keyLight.target = modelCenter;
+        keyLight.angle = Math.PI / 3;
+        keyLight.penumbra = 0.5;
+        keyLight.decay = 1;
+        scene.add(keyLight);
 
-        const fill = new THREE.PointLight(0x9acbff, 0.8, 10);
-        fill.position.set(2.2, 1.5, -2.2);
-        scene.add(fill);
+        // Fill light - заполняющий справа-спереди (45°)
+        const fillLight = new THREE.SpotLight(0xe0f0ff, 60);
+        fillLight.position.set(3, 3.5, 2.5);
+        fillLight.target = modelCenter;
+        fillLight.angle = Math.PI / 3;
+        fillLight.penumbra = 0.6;
+        fillLight.decay = 1;
+        scene.add(fillLight);
+
+        // Rim/Back light - контровой сзади-сверху
+        const rimLight = new THREE.SpotLight(0xffeedd, 50);
+        rimLight.position.set(0, 5, -3);
+        rimLight.target = modelCenter;
+        rimLight.angle = Math.PI / 2.5;
+        rimLight.penumbra = 0.4;
+        rimLight.decay = 1;
+        scene.add(rimLight);
+
+        // Дополнительный фронтальный свет прямо на камеру
+        const frontLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        frontLight.position.set(0, 2, 5);
+        scene.add(frontLight);
+
+        // Нижняя подсветка для устранения тёмного низа
+        const bottomLight = new THREE.PointLight(0xaaccff, 40, 8);
+        bottomLight.position.set(0, -0.5, 0);
+        scene.add(bottomLight);
 
         const trophyPlaceholder = new THREE.Group();
         scene.add(trophyPlaceholder); // оставляем группу, чтобы сохранять ссылки в анимации
@@ -195,9 +248,28 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        if (child.material && child.material.roughness !== undefined) {
-                            child.material.roughness = Math.max(0.05, child.material.roughness * 0.6);
-                            child.material.metalness = Math.min(1, (child.material.metalness || 0.5) + 0.2);
+                        // Принудительно делаем материал ярче
+                        if (child.material) {
+                            // Клонируем материал чтобы не изменять оригинал
+                            child.material = child.material.clone();
+                            // Снижаем roughness для блеска
+                            if (child.material.roughness !== undefined) {
+                                child.material.roughness = Math.max(0.02, child.material.roughness * 0.4);
+                            }
+                            // Увеличиваем metalness
+                            if (child.material.metalness !== undefined) {
+                                child.material.metalness = Math.min(1, child.material.metalness + 0.3);
+                            }
+                            // Добавляем emissive для гарантированной видимости
+                            if (child.material.emissive !== undefined) {
+                                child.material.emissive = new THREE.Color(0x222222);
+                                child.material.emissiveIntensity = 0.15;
+                            }
+                            // Убираем прозрачность если слишком низкая opacity
+                            if (child.material.transparent && child.material.opacity < 0.3) {
+                                child.material.opacity = 0.6;
+                            }
+                            child.material.needsUpdate = true;
                         }
                     }
                 });
@@ -213,7 +285,7 @@
         );
 
         let lastTime = performance.now();
-        const idleSpeed = 0.25; // rad/sec
+        const idleSpeed = 0.3; // rad/sec, чуть быстрее для заметного движения
 
         function resize() {
             const { innerWidth: w, innerHeight: h } = window;
