@@ -141,6 +141,8 @@
         import * as THREE from "three";
         import { OrbitControls } from "three/addons/controls/OrbitControls.js";
         import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+        import { FontLoader } from "three/addons/loaders/FontLoader.js";
+        import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
         const container = document.getElementById("scene");
 
@@ -275,8 +277,50 @@
                 });
 
                 model.name = "GLB_Trophy";
+
                 scene.add(model);
                 trophyPlaceholder.visible = false;
+
+                // ==================== ОБЪЁМНЫЙ ТЕКСТ "5S" ====================
+                // Загрузка шрифта и создание текста
+                const fontLoader = new FontLoader();
+                fontLoader.load("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json", (font) => {
+                    const textGeo = new TextGeometry("5S", {
+                        font: font, // загруженный шрифт
+                        size: 0.28, // размер текста (в сцене)
+                        height: 0.11, // толщина (глубина) букв
+                        curveSegments: 12, // качество округлых частей
+                        bevelEnabled: true, // включить фаску (скос)
+                        bevelThickness: 0.03, // толщина фаски
+                        bevelSize: 0.018, // размер фаски
+                        bevelOffset: 0, // смещение фаски
+                        bevelSegments: 6 // качество фаски
+                    });
+                    textGeo.computeBoundingBox();
+                    textGeo.center();
+
+                    const goldMat = new THREE.MeshPhysicalMaterial({
+                        color: 0xf7d046,
+                        metalness: 1,
+                        roughness: 0.18,
+                        clearcoat: 0.5,
+                        clearcoatRoughness: 0.08,
+                        reflectivity: 1,
+                        transmission: 0,
+                        ior: 1.45,
+                        thickness: 0.18,
+                        sheen: 1,
+                        sheenColor: new THREE.Color(0xfff7b2),
+                        sheenRoughness: 0.25
+                    });
+                    const textMesh = new THREE.Mesh(textGeo, goldMat);
+                    textMesh.castShadow = true;
+                    textMesh.receiveShadow = true;
+                    // Позиция: над кубком
+                    textMesh.position.set(-0.1, 1.55, 0);
+                    textMesh.rotation.z = 0.4;
+                    scene.add(textMesh);
+                });
 
                 // ==================== ТАБЛИЧКА С НАДПИСЬЮ ====================
                 // Создаём текстуру с текстом через Canvas
