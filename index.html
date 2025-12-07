@@ -32,21 +32,24 @@
         canvas { display: block; width: 100%; height: 100%; }
         .overlay {
             position: absolute;
-            top: 24px;
-            left: 24px;
-            padding: 18px 20px;
-            border-radius: 14px;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 20px 28px;
+            border-radius: 16px;
             background: var(--panel);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-            max-width: 320px;
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            max-width: 400px;
+            text-align: center;
         }
         .overlay h1 {
-            margin: 0 0 8px;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            margin: 0 0 12px;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            line-height: 1.3;
         }
         .overlay p {
             margin: 4px 0;
@@ -57,15 +60,17 @@
         .badge {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            padding: 8px 12px;
-            margin-top: 10px;
-            border-radius: 10px;
-            background: rgba(247, 208, 70, 0.12);
+            padding: 12px 20px;
+            margin-top: 14px;
+            border-radius: 12px;
+            background: rgba(247, 208, 70, 0.18);
             color: var(--accent);
-            font-weight: 600;
-            font-size: 13px;
-            letter-spacing: 0.3px;
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
         .hud {
             position: absolute;
@@ -93,23 +98,24 @@
 
         @media (max-width: 768px) {
             .overlay {
-                top: 14px;
-                left: 14px;
-                padding: 14px 16px;
-                max-width: 86vw;
+                bottom: 70px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 16px 20px;
+                max-width: 92vw;
                 font-size: 13px;
             }
-            .overlay h1 { font-size: 18px; }
-            .overlay p { font-size: 13px; }
-            .badge { font-size: 12px; padding: 7px 10px; }
+            .overlay h1 { font-size: 15px; }
+            .overlay p { font-size: 12px; }
+            .badge { font-size: 18px; padding: 10px 16px; }
             .hud {
-                bottom: 14px;
-                padding: 8px 12px;
-                gap: 8px;
-                font-size: 12px;
-                border-radius: 10px;
+                bottom: 12px;
+                padding: 6px 10px;
+                gap: 6px;
+                font-size: 11px;
+                border-radius: 8px;
             }
-            .key { padding: 3px 7px; font-size: 12px; }
+            .key { padding: 2px 5px; font-size: 11px; }
         }
     </style>
 </head>
@@ -117,9 +123,8 @@
     <div class="layout">
         <div id="scene"></div>
         <div class="overlay">
-            <h1>3D Кубок победителя</h1>
-            <p>Базовая сцена для демонстрации кубка. Можно вращать, приближать и рассматривать со всех сторон.</p>
-            <div class="badge">Three.js · Орбитальное управление</div>
+            <h1>Победитель в номинации<br>лучшее подразделение</h1>
+            <div class="badge">Участок АС</div>
         </div>
         <div class="hud">
             <span class="key">ЛКМ</span> вращать
@@ -278,8 +283,61 @@
 
                 model.name = "GLB_Trophy";
 
-                scene.add(model);
+                // Создаём группу для модели + текст + табличка (всё вместе вращается)
+                const trophyGroup = new THREE.Group();
+                trophyGroup.add(model);
+                scene.add(trophyGroup);
                 trophyPlaceholder.visible = false;
+                loadedModel = trophyGroup; // сохраняем группу для авто-вращения
+
+                // ==================== ТАБЛИЧКА С НАДПИСЬЮ ====================
+                // Создаём текстуру с текстом через Canvas
+                const canvas = document.createElement("canvas");
+                canvas.width = 512;
+                canvas.height = 128;
+                const ctx = canvas.getContext("2d");
+
+                // Фон таблички (золотистый металлик)
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, "#d4af37");
+                gradient.addColorStop(0.5, "#f7e98e");
+                gradient.addColorStop(1, "#c5a028");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Рамка
+                ctx.strokeStyle = "#8b7500";
+                ctx.lineWidth = 6;
+                ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+                // Текст - контрастный тёмный с тенью
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                ctx.fillStyle = "#0a0a12";
+                ctx.font = "bold 58px Arial, sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Участок АС", canvas.width / 2, canvas.height / 2);
+                ctx.shadowColor = "transparent";
+
+                const plateTexture = new THREE.CanvasTexture(canvas);
+                plateTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+                // Геометрия таблички
+                const plateGeometry = new THREE.PlaneGeometry(0.45, 0.125);
+                const plateMaterial = new THREE.MeshStandardMaterial({
+                    map: plateTexture,
+                    metalness: 0.6,
+                    roughness: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+
+                // Позиция: перед кубком, у основания
+                plate.position.set(0, 0.19, 0.15);
+                trophyGroup.add(plate); // добавляем в группу
 
                 // ==================== ОБЪЁМНЫЙ ТЕКСТ "5S" ====================
                 // Загрузка шрифта и создание текста
@@ -319,52 +377,8 @@
                     // Позиция: над кубком
                     textMesh.position.set(-0.1, 1.55, 0);
                     textMesh.rotation.z = 0.4;
-                    scene.add(textMesh);
+                    trophyGroup.add(textMesh); // добавляем в группу
                 });
-
-                // ==================== ТАБЛИЧКА С НАДПИСЬЮ ====================
-                // Создаём текстуру с текстом через Canvas
-                const canvas = document.createElement("canvas");
-                canvas.width = 512;
-                canvas.height = 128;
-                const ctx = canvas.getContext("2d");
-
-                // Фон таблички (золотистый металлик)
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, "#d4af37");
-                gradient.addColorStop(0.5, "#f7e98e");
-                gradient.addColorStop(1, "#c5a028");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Рамка
-                ctx.strokeStyle = "#8b7500";
-                ctx.lineWidth = 6;
-                ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-
-                // Текст
-                ctx.fillStyle = "#202020"; // тёный
-                ctx.font = "bold 64px Arial, sans-serif";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("АС", canvas.width / 2, canvas.height / 2);
-
-                const plateTexture = new THREE.CanvasTexture(canvas);
-                plateTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-                // Геометрия таблички
-                const plateGeometry = new THREE.PlaneGeometry(0.45, 0.125);
-                const plateMaterial = new THREE.MeshStandardMaterial({
-                    map: plateTexture,
-                    metalness: 0.6,
-                    roughness: 0.3,
-                    side: THREE.DoubleSide
-                });
-                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-
-                // Позиция: перед кубком, у основания
-                plate.position.set(0, 0.19, 0.15);
-                scene.add(plate);
             },
             undefined,
             (err) => {
@@ -373,7 +387,19 @@
         );
 
         let lastTime = performance.now();
-        const idleSpeed = 0.3; // rad/sec, чуть быстрее для заметного движения
+        const idleSpeed = 0.12; // rad/sec — медленное плавное вращение
+        let userInteracting = false;
+        let interactionTimeout = null;
+        let loadedModel = null; // ссылка на загруженную модель
+
+        // Отслеживание взаимодействия пользователя
+        controls.addEventListener("start", () => {
+            userInteracting = true;
+            if (interactionTimeout) clearTimeout(interactionTimeout);
+        });
+        controls.addEventListener("end", () => {
+            interactionTimeout = setTimeout(() => { userInteracting = false; }, 2000);
+        });
 
         function resize() {
             const { innerWidth: w, innerHeight: h } = window;
@@ -388,7 +414,10 @@
             const delta = (now - lastTime) / 1000;
             lastTime = now;
 
-            trophyPlaceholder.rotation.y += idleSpeed * delta;
+            // Авто-вращение модели, если пользователь не взаимодействует
+            if (!userInteracting && loadedModel) {
+                loadedModel.rotation.y += idleSpeed * delta;
+            }
             controls.update();
             renderer.render(scene, camera);
         }
