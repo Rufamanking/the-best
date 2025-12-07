@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>3D Кубок Победителя</title>
     <style>
         :root {
@@ -98,12 +98,12 @@
 
         @media (max-width: 768px) {
             .overlay {
-                bottom: 16px;
+                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
                 left: 50%;
                 transform: translateX(-50%);
                 width: calc(100vw - 32px);
                 max-width: none;
-                max-height: calc(100vh - 32px);
+                max-height: calc(100vh - 160px - env(safe-area-inset-bottom, 0px));
                 padding: 14px 16px;
                 border-radius: 12px;
                 overflow-y: auto;
