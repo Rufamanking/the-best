@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>3D Кубок Победителя</title>
+    <title>Кубоктар витринасы — The Best</title>
     <style>
         :root {
-            --bg: radial-gradient(circle at 20% 20%, #1b2340 0%, #0d1226 35%, #070912 100%);
-            --panel: rgba(19, 24, 43, 0.6);
+            --bg: radial-gradient(ellipse at 50% 0%, #1b2340 0%, #0d1226 40%, #070912 100%);
+            --panel: rgba(19, 24, 43, 0.7);
             --text: #e8ecf2;
             --accent: #f7d046;
+            --accent-glow: rgba(247, 208, 70, 0.4);
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             margin: 0;
             min-height: 100vh;
@@ -29,160 +30,157 @@
             position: absolute;
             inset: 0;
         }
-        canvas { display: block; width: 100%; height: 100%; }
-        .overlay {
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+
+        /* Header overlay */
+        .header-overlay {
             position: absolute;
-            bottom: 80px;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 30px 40px;
+            background: linear-gradient(to bottom, rgba(7, 9, 18, 0.9) 0%, transparent 100%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .header-overlay h1 {
+            font-size: clamp(24px, 5vw, 42px);
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, #fff 100%);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        .header-overlay p {
+            font-size: clamp(12px, 2vw, 16px);
+            color: #8892a6;
+        }
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Hint to click */
+        .click-hint {
+            position: absolute;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 20px 28px;
+            padding: 14px 28px;
             border-radius: 16px;
             background: var(--panel);
             backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-            max-width: 400px;
             text-align: center;
-        }
-        .overlay h1 {
-            margin: 0 0 12px;
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 0.4px;
-            line-height: 1.3;
-        }
-        .overlay p {
-            margin: 4px 0;
-            font-size: 14px;
-            color: #c7d0dd;
-            line-height: 1.4;
-        }
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 20px;
-            margin-top: 14px;
-            border-radius: 12px;
-            background: rgba(247, 208, 70, 0.18);
-            color: var(--accent);
-            font-weight: 700;
-            font-size: 22px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .hud {
-            position: absolute;
-            bottom: 22px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 16px;
-            border-radius: 12px;
-            background: rgba(12, 15, 28, 0.75);
-            color: #dbe4f5;
-            font-size: 13px;
-            letter-spacing: 0.3px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-        }
-        .key {
-            padding: 4px 8px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            font-weight: 600;
-        }
-
-        /* Rotation hint arrows */
-        .rotation-hint {
-            position: absolute;
-            bottom: 260px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 60px;
-            opacity: 0.7;
-            animation: pulseHint 2s ease-in-out infinite;
             pointer-events: none;
+            animation: pulseHint 2s ease-in-out infinite;
             z-index: 10;
         }
-        .rotation-hint .arrow {
-            font-size: 32px;
-            color: var(--accent);
-            text-shadow: 0 0 15px rgba(247, 208, 70, 0.6), 0 0 30px rgba(247, 208, 70, 0.3);
-            animation: floatArrow 1.5s ease-in-out infinite;
-        }
-        .rotation-hint .arrow.left {
-            animation-delay: 0s;
-        }
-        .rotation-hint .arrow.right {
-            animation-delay: 0.75s;
-        }
-        .rotation-hint .hint-text {
-            font-size: 12px;
+        .click-hint p {
+            font-size: 14px;
             color: #c7d0dd;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            white-space: nowrap;
+            margin-bottom: 6px;
+        }
+        .click-hint .accent {
+            color: var(--accent);
+            font-weight: 600;
         }
         @keyframes pulseHint {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 0.9; }
+            0%, 100% { opacity: 0.7; transform: translateX(-50%) translateY(0); }
+            50% { opacity: 1; transform: translateX(-50%) translateY(-5px); }
         }
-        @keyframes floatArrow {
-            0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(-8px); }
+
+        /* Trophy label */
+        .trophy-label {
+            position: absolute;
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            z-index: 20;
         }
-        .rotation-hint .arrow.right {
-            animation-name: floatArrowRight;
+        .trophy-label.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
-        @keyframes floatArrowRight {
-            0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(8px); }
+        .trophy-label .year {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(247, 208, 70, 0.2);
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 10px;
+            margin-bottom: 6px;
+        }
+        .trophy-label .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .trophy-label .subtitle {
+            font-size: 11px;
+            color: #8892a6;
+        }
+
+        /* Navigation hint */
+        .nav-hint {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(12, 15, 28, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            z-index: 10;
+        }
+        .nav-hint span {
+            font-size: 12px;
+            color: #6b7a99;
+        }
+        .nav-hint .key {
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #c7d0dd;
+            font-weight: 600;
+            font-size: 11px;
         }
 
         @media (max-width: 768px) {
-            .rotation-hint {
-                bottom: 220px;
-                gap: 40px;
+            .header-overlay {
+                padding: 20px;
             }
-            .rotation-hint .arrow {
-                font-size: 24px;
+            .click-hint {
+                bottom: 80px;
+                padding: 12px 20px;
             }
-            .rotation-hint .hint-text {
-                font-size: 10px;
+            .click-hint p {
+                font-size: 12px;
             }
-            .overlay {
-                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-                left: 50%;
-                transform: translateX(-50%);
-                width: calc(100vw - 32px);
-                max-width: none;
-                max-height: calc(100vh - 160px - env(safe-area-inset-bottom, 0px));
-                padding: 14px 16px;
-                border-radius: 12px;
-                overflow-y: auto;
-                overflow-x: hidden;
-            }
-            .overlay h1 { 
-                font-size: 14px; 
-                margin-bottom: 8px;
-                line-height: 1.3;
-            }
-            .overlay p { 
-                font-size: 12px; 
-                margin: 4px 0;
-            }
-            .badge { 
-                font-size: 18px; 
-                padding: 10px 16px; 
-                margin-top: 10px;
-                width: 100%;
-                max-width: 100%;
+            .nav-hint {
+                bottom: 16px;
+                padding: 10px 16px;
+                gap: 12px;
             }
         }
     </style>
@@ -190,14 +188,26 @@
 <body>
     <div class="layout">
         <div id="scene"></div>
-        <div class="rotation-hint">
-            <span class="arrow left">◀</span>
-            <span class="hint-text">вращайте</span>
-            <span class="arrow right">▶</span>
+        
+        <div class="header-overlay">
+            <h1>🏆 Кубоктар витринасы</h1>
+            <p>Марапаттар мен жетістіктер жинағы</p>
         </div>
-        <div class="overlay">
-            <h1>Победитель в номинации<br>лучшее подразделение</h1>
-            <div class="badge">"АТУ"</div>
+
+        <div class="click-hint">
+            <p><span class="accent">Кубокты басыңыз</span> толық көру үшін</p>
+            <p>Сахнаны тінтуірмен айналдырыңыз</p>
+        </div>
+
+        <div class="trophy-label" id="trophyLabel">
+            <div class="year">2025</div>
+            <div class="title">5S кубогы</div>
+            <div class="subtitle">Үздік бөлімше — "АТУ"</div>
+        </div>
+
+        <div class="nav-hint">
+            <span><span class="key">🖱️ ЛКМ</span> Айналдыру</span>
+            <span><span class="key">🔍 Дөңгелек</span> Жақындату</span>
         </div>
     </div>
 
@@ -214,254 +224,442 @@
         import * as THREE from "three";
         import { OrbitControls } from "three/addons/controls/OrbitControls.js";
         import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-        import { FontLoader } from "three/addons/loaders/FontLoader.js";
-        import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
         const container = document.getElementById("scene");
+        const trophyLabel = document.getElementById("trophyLabel");
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         const isMobile = window.matchMedia("(max-width: 768px)").matches;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
-        renderer.setClearColor(0x0a1020, 1);
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x070912, 1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.8;
+        renderer.toneMappingExposure = 1.6;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         container.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
 
-        const camera = new THREE.PerspectiveCamera(isMobile ? 55 : 50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, isMobile ? 1.4 : 1.6, isMobile ? 3.0 : 3.4);
-        camera.lookAt(0, 0.5, 0);
+        // Fog for atmosphere
+        scene.fog = new THREE.Fog(0x070912, 8, 25);
+
+        const camera = new THREE.PerspectiveCamera(isMobile ? 50 : 45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 7);
+        camera.lookAt(0, 0, 0);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
-        controls.minDistance = isMobile ? 1.0 : 1.3;
-        controls.maxDistance = isMobile ? 4.5 : 6;
-        controls.maxPolarAngle = Math.PI / 2;
-        controls.enablePan = false; // Отключаем перемещение камеры
-        controls.target.set(0, 0.5, 0);
+        controls.minDistance = 3;
+        controls.maxDistance = 15;
+        controls.maxPolarAngle = Math.PI / 2.1;
+        controls.minPolarAngle = Math.PI / 6;
+        controls.enablePan = false;
+        controls.target.set(0, 1, 0);
         controls.update();
 
-        // ==================== ОСВЕЩЕНИЕ ====================
-        // Высокий ambient для базовой видимости
-        const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+        // ==================== FLOOR / PEDESTAL ====================
+        // Main floor
+        const floorGeometry = new THREE.CircleGeometry(12, 64);
+        const floorMaterial = new THREE.MeshStandardMaterial({
+            color: 0x0a0e1a,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = 0;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Showcase pedestal
+        const pedestalGeometry = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 64);
+        const pedestalMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x1a1f35,
+            roughness: 0.3,
+            metalness: 0.8,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.2
+        });
+        const pedestal = new THREE.Mesh(pedestalGeometry, pedestalMaterial);
+        pedestal.position.set(0, 0.15, 0);
+        pedestal.receiveShadow = true;
+        pedestal.castShadow = true;
+        scene.add(pedestal);
+
+        // Glowing ring on pedestal
+        const ringGeometry = new THREE.TorusGeometry(1.25, 0.02, 16, 100);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xf7d046,
+            transparent: true,
+            opacity: 0.6
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.31;
+        scene.add(ring);
+
+        // ==================== CIRCULAR TEXT ON FLOOR ====================
+        // Create text that follows a circle on the floor
+        function createCircularFloorText(text, radius, fontSize, color, y = 0.02) {
+            const group = new THREE.Group();
+            const chars = text.split('');
+            const totalChars = chars.length;
+            const anglePerChar = (Math.PI * 2) / totalChars;
+            
+            chars.forEach((char, i) => {
+                // Calculate position on circle
+                const angle = i * anglePerChar - Math.PI / 2; // Start from front
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                
+                // Create canvas for character
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                
+                // Clear
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Glow
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = color;
+                ctx.fillText(char, 64, 64);
+                ctx.shadowBlur = 8;
+                ctx.fillText(char, 64, 64);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.95,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                
+                const size = fontSize * 0.011;
+                const plane = new THREE.Mesh(
+                    new THREE.PlaneGeometry(size, size),
+                    material
+                );
+                
+                // Position on floor
+                plane.position.set(x, y, z);
+                // Lay flat on floor
+                plane.rotation.x = -Math.PI / 2;
+                // Rotate to face outward from center (tangent to circle)
+                plane.rotation.z = -angle - Math.PI / 2;
+                
+                group.add(plane);
+            });
+            
+            return group;
+        }
+
+        // Main circular text - full circle around pedestal
+        // Format (KZ): "5S КУБОГЫ • 2025 • АТУ • ҮЗДІК БӨЛІМШЕ •"
+        const circularText = createCircularFloorText(
+            '  5S КУБОГЫ  •  2025  •  АKУ  •  ҮЗДІК БӨЛІМШЕ  •  ',
+            2.2, 58, '#f7d046', 0.02
+        );
+        scene.add(circularText);
+
+        // Outer decorative ring - stars and year
+        const outerText = createCircularFloorText(
+            '★  ★  ★  2025  ★  ★  ★  5S  ★  ★  ★  2025  ★  ★  ★  5S  ',
+            2.8, 42, '#ffffff', 0.015
+        );
+        outerText.children.forEach(child => {
+            child.material.opacity = 0.5;
+        });
+        scene.add(outerText);
+
+        // Inner glow ring
+        const innerRingGeo = new THREE.RingGeometry(1.9, 2.0, 64);
+        const innerRingMat = new THREE.MeshBasicMaterial({
+            color: 0xf7d046,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.DoubleSide
+        });
+        const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+        innerRing.rotation.x = -Math.PI / 2;
+        innerRing.position.y = 0.01;
+        scene.add(innerRing);
+
+        // Outer glow ring
+        const outerRingGeo = new THREE.RingGeometry(2.6, 2.7, 64);
+        const outerRingMat = new THREE.MeshBasicMaterial({
+            color: 0xf7d046,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.DoubleSide
+        });
+        const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+        outerRing.rotation.x = -Math.PI / 2;
+        outerRing.position.y = 0.01;
+        scene.add(outerRing);
+
+        // ==================== PROJECTORS ====================
+        // Projector housings
+        const projectorPositions = [
+            { x: -3, z: 3, rotY: Math.PI / 4 },
+            { x: 0, z: 4, rotY: 0 },
+            { x: 3, z: 3, rotY: -Math.PI / 4 }
+        ];
+
+        projectorPositions.forEach((pos, i) => {
+            // Projector body
+            const projectorGroup = new THREE.Group();
+            
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(0.4, 0.25, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x2a2a3a, roughness: 0.5, metalness: 0.7 })
+            );
+            projectorGroup.add(body);
+
+            const lens = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.1, 0.15, 16),
+                new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.9 })
+            );
+            lens.rotation.x = Math.PI / 2;
+            lens.position.z = -0.3;
+            projectorGroup.add(lens);
+
+            // Lens glow
+            const lensGlow = new THREE.Mesh(
+                new THREE.CircleGeometry(0.07, 16),
+                new THREE.MeshBasicMaterial({ color: 0xfff8e0, transparent: true, opacity: 0.9 })
+            );
+            lensGlow.position.z = -0.38;
+            projectorGroup.add(lensGlow);
+
+            projectorGroup.position.set(pos.x, 5.5, pos.z);
+            projectorGroup.rotation.x = Math.PI / 4;
+            projectorGroup.rotation.y = pos.rotY;
+            scene.add(projectorGroup);
+        });
+
+        // ==================== LIGHTING ====================
+        // Ambient
+        const ambient = new THREE.AmbientLight(0x404060, 0.4);
         scene.add(ambient);
 
-        // Hemisphere для мягкого градиента небо/земля
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 1.0);
+        // Hemisphere
+        const hemi = new THREE.HemisphereLight(0x606080, 0x101020, 0.5);
         scene.add(hemi);
 
-        // Центр модели для направления света
-        const modelCenter = new THREE.Object3D();
-        modelCenter.position.set(0, 0.8, 0);
-        scene.add(modelCenter);
+        // Spotlight 1 - left front (warm)
+        const spot1 = new THREE.SpotLight(0xfff0d0, 100);
+        spot1.position.set(-3, 5.5, 3);
+        spot1.target.position.set(0, 0.5, 0);
+        spot1.angle = Math.PI / 6;
+        spot1.penumbra = 0.5;
+        spot1.decay = 1.5;
+        spot1.castShadow = true;
+        spot1.shadow.mapSize.width = 1024;
+        spot1.shadow.mapSize.height = 1024;
+        scene.add(spot1);
+        scene.add(spot1.target);
 
-        // Key light - основной слева-спереди (45°)
-        const keyLight = new THREE.SpotLight(0xffffff, 80);
-        keyLight.position.set(-3, 4, 3);
-        keyLight.target = modelCenter;
-        keyLight.angle = Math.PI / 3;
-        keyLight.penumbra = 0.5;
-        keyLight.decay = 1;
-        scene.add(keyLight);
+        // Spotlight 2 - center (bright white)
+        const spot2 = new THREE.SpotLight(0xffffff, 120);
+        spot2.position.set(0, 6, 4);
+        spot2.target.position.set(0, 0.5, 0);
+        spot2.angle = Math.PI / 7;
+        spot2.penumbra = 0.4;
+        spot2.decay = 1.5;
+        spot2.castShadow = true;
+        spot2.shadow.mapSize.width = 1024;
+        spot2.shadow.mapSize.height = 1024;
+        scene.add(spot2);
+        scene.add(spot2.target);
 
-        // Fill light - заполняющий справа-спереди (45°)
-        const fillLight = new THREE.SpotLight(0xe0f0ff, 60);
-        fillLight.position.set(3, 3.5, 2.5);
-        fillLight.target = modelCenter;
-        fillLight.angle = Math.PI / 3;
-        fillLight.penumbra = 0.6;
-        fillLight.decay = 1;
-        scene.add(fillLight);
+        // Spotlight 3 - right front (cool)
+        const spot3 = new THREE.SpotLight(0xe0f0ff, 80);
+        spot3.position.set(3, 5.5, 3);
+        spot3.target.position.set(0, 0.5, 0);
+        spot3.angle = Math.PI / 6;
+        spot3.penumbra = 0.5;
+        spot3.decay = 1.5;
+        spot3.castShadow = true;
+        scene.add(spot3);
+        scene.add(spot3.target);
 
-        // Rim/Back light - контровой сзади-сверху
-        const rimLight = new THREE.SpotLight(0xffeedd, 50);
-        rimLight.position.set(0, 5, -3);
-        rimLight.target = modelCenter;
-        rimLight.angle = Math.PI / 2.5;
-        rimLight.penumbra = 0.4;
-        rimLight.decay = 1;
+        // Rim light from back
+        const rimLight = new THREE.SpotLight(0xffd090, 40);
+        rimLight.position.set(0, 4, -4);
+        rimLight.target.position.set(0, 1, 0);
+        rimLight.angle = Math.PI / 4;
+        rimLight.penumbra = 0.6;
         scene.add(rimLight);
+        scene.add(rimLight.target);
 
-        // Дополнительный фронтальный свет прямо на камеру
-        const frontLight = new THREE.DirectionalLight(0xffffff, 2.0);
-        frontLight.position.set(0, 2, 5);
-        scene.add(frontLight);
+        // Volumetric light cones (visual)
+        function createLightCone(position, target, color) {
+            const direction = new THREE.Vector3().subVectors(target, position).normalize();
+            const length = position.distanceTo(target);
+            
+            const coneGeometry = new THREE.ConeGeometry(1.2, length, 32, 1, true);
+            const coneMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.04,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            
+            cone.position.copy(position);
+            cone.position.y -= length / 2;
+            
+            return cone;
+        }
 
-        // Нижняя подсветка для устранения тёмного низа
-        const bottomLight = new THREE.PointLight(0xaaccff, 40, 8);
-        bottomLight.position.set(0, -0.5, 0);
-        scene.add(bottomLight);
+        const cone1 = createLightCone(new THREE.Vector3(-3, 5.5, 3), new THREE.Vector3(0, 0.3, 0), 0xfff0d0);
+        const cone2 = createLightCone(new THREE.Vector3(0, 6, 4), new THREE.Vector3(0, 0.3, 0), 0xffffff);
+        const cone3 = createLightCone(new THREE.Vector3(3, 5.5, 3), new THREE.Vector3(0, 0.3, 0), 0xe0f0ff);
+        scene.add(cone1, cone2, cone3);
 
-        const trophyPlaceholder = new THREE.Group();
-        scene.add(trophyPlaceholder); // оставляем группу, чтобы сохранять ссылки в анимации
+        // ==================== DUST PARTICLES ====================
+        const particleCount = 100;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleSpeeds = [];
 
-        // Загрузка внешней модели кубка (GLB)
+        for (let i = 0; i < particleCount; i++) {
+            particlePositions[i * 3] = (Math.random() - 0.5) * 6;
+            particlePositions[i * 3 + 1] = Math.random() * 5 + 0.5;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+            particleSpeeds.push(0.002 + Math.random() * 0.005);
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0xffffee,
+            size: 0.03,
+            transparent: true,
+            opacity: 0.6,
+            depthWrite: false
+        });
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // ==================== TROPHY ====================
+        let trophyGroup = null;
+        let trophy2025 = null;
+        const clickableObjects = [];
+
         const loader = new GLTFLoader();
         loader.load(
-            "./glass_trophy.glb",
+            "./5s/2025/cup-aku.glb",
             (gltf) => {
                 const model = gltf.scene;
-                // Авто-нормализация размера
+                
+                // Scale and center
                 const box = new THREE.Box3().setFromObject(model);
                 const size = new THREE.Vector3();
                 box.getSize(size);
                 const maxDim = Math.max(size.x, size.y, size.z) || 1;
-                const scale = 1.6 / maxDim;
+                const scale = 1.8 / maxDim;
                 model.scale.setScalar(scale);
 
-                // Центровка по основанию
                 const center = new THREE.Vector3();
                 box.getCenter(center);
                 model.position.sub(center.multiplyScalar(scale));
-                model.position.y += (size.y * scale) / 2 + 0.05; // приподнять чуть над плоскостью
+                model.position.y = 0.3 + (size.y * scale) / 2;
 
                 model.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        // Принудительно делаем материал ярче
                         if (child.material) {
-                            // Клонируем материал чтобы не изменять оригинал
                             child.material = child.material.clone();
-                            // Снижаем roughness для блеска
                             if (child.material.roughness !== undefined) {
                                 child.material.roughness = Math.max(0.02, child.material.roughness * 0.4);
                             }
-                            // Увеличиваем metalness
                             if (child.material.metalness !== undefined) {
                                 child.material.metalness = Math.min(1, child.material.metalness + 0.3);
                             }
-                            // Добавляем emissive для гарантированной видимости
                             if (child.material.emissive !== undefined) {
                                 child.material.emissive = new THREE.Color(0x222222);
-                                child.material.emissiveIntensity = 0.15;
-                            }
-                            // Убираем прозрачность если слишком низкая opacity
-                            if (child.material.transparent && child.material.opacity < 0.3) {
-                                child.material.opacity = 0.6;
+                                child.material.emissiveIntensity = 0.1;
                             }
                             child.material.needsUpdate = true;
                         }
                     }
                 });
 
-                model.name = "GLB_Trophy";
-
-                // Создаём группу для модели + текст + табличка (всё вместе вращается)
-                const trophyGroup = new THREE.Group();
+                trophyGroup = new THREE.Group();
                 trophyGroup.add(model);
+                trophyGroup.userData = { 
+                    link: "./5s/2025/",
+                    year: "2025",
+                    title: "Кубок 5S",
+                    subtitle: "Лучшее подразделение — \"АТУ\""
+                };
                 scene.add(trophyGroup);
-                trophyPlaceholder.visible = false;
-                loadedModel = trophyGroup; // сохраняем группу для авто-вращения
-
-                // ==================== ТАБЛИЧКА С НАДПИСЬЮ ====================
-                // Создаём текстуру с текстом через Canvas
-                const canvas = document.createElement("canvas");
-                canvas.width = 512;
-                canvas.height = 128;
-                const ctx = canvas.getContext("2d");
-
-                // Фон таблички (золотистый металлик)
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, "#d4af37");
-                gradient.addColorStop(0.5, "#f7e98e");
-                gradient.addColorStop(1, "#c5a028");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Рамка
-                ctx.strokeStyle = "#8b7500";
-                ctx.lineWidth = 6;
-                ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-
-                // Текст - контрастный тёмный с тенью
-                ctx.shadowColor = "rgba(0,0,0,0.5)";
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
-                ctx.fillStyle = "#0a0a12";
-                ctx.font = "bold 58px Arial, sans-serif";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("АТУ", canvas.width / 2, canvas.height / 2);
-                ctx.shadowColor = "transparent";
-
-                const plateTexture = new THREE.CanvasTexture(canvas);
-                plateTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-                // Геометрия таблички
-                const plateGeometry = new THREE.PlaneGeometry(0.45, 0.125);
-                const plateMaterial = new THREE.MeshStandardMaterial({
-                    map: plateTexture,
-                    metalness: 0.6,
-                    roughness: 0.3,
-                    side: THREE.DoubleSide
-                });
-                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-
-                // Позиция: перед кубком, у основания
-                plate.position.set(0, 0.19, 0.15);
-                trophyGroup.add(plate); // добавляем в группу
-
-                // ==================== ОБЪЁМНЫЙ ТЕКСТ "5S" ====================
-                // Загрузка шрифта и создание текста
-                const fontLoader = new FontLoader();
-                fontLoader.load("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json", (font) => {
-                    const textGeo = new TextGeometry("5S", {
-                        font: font, // загруженный шрифт
-                        size: 0.28, // размер текста (в сцене)
-                        height: 0.11, // толщина (глубина) букв
-                        curveSegments: 12, // качество округлых частей
-                        bevelEnabled: true, // включить фаску (скос)
-                        bevelThickness: 0.03, // толщина фаски
-                        bevelSize: 0.018, // размер фаски
-                        bevelOffset: 0, // смещение фаски
-                        bevelSegments: 6 // качество фаски
-                    });
-                    textGeo.computeBoundingBox();
-                    textGeo.center();
-
-                    const goldMat = new THREE.MeshPhysicalMaterial({
-                        color: 0xf7d046,
-                        metalness: 1,
-                        roughness: 0.18,
-                        clearcoat: 0.5,
-                        clearcoatRoughness: 0.08,
-                        reflectivity: 1,
-                        transmission: 0,
-                        ior: 1.45,
-                        thickness: 0.18,
-                        sheen: 1,
-                        sheenColor: new THREE.Color(0xfff7b2),
-                        sheenRoughness: 0.25
-                    });
-                    const textMesh = new THREE.Mesh(textGeo, goldMat);
-                    textMesh.castShadow = true;
-                    textMesh.receiveShadow = true;
-                    // Позиция: над кубком
-                    textMesh.position.set(-0.1, 1.55, 0);
-                    textMesh.rotation.z = 0.4;
-                    trophyGroup.add(textMesh); // добавляем в группу
-                });
+                
+                trophy2025 = trophyGroup;
+                clickableObjects.push(trophyGroup);
             },
             undefined,
-            (err) => {
-                console.warn("GLB load error", err);
-            }
+            (err) => console.warn("GLB load error", err)
         );
 
+        // ==================== RAYCASTER FOR CLICK ====================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredObject = null;
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onClick(event) {
+            if (hoveredObject && hoveredObject.userData.link) {
+                window.location.href = hoveredObject.userData.link;
+            }
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('click', onClick);
+        window.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(clickableObjects, true);
+                
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj.parent && !obj.userData.link) {
+                        obj = obj.parent;
+                    }
+                    if (obj.userData.link) {
+                        window.location.href = obj.userData.link;
+                    }
+                }
+            }
+        });
+
+        // ==================== ANIMATION ====================
         let lastTime = performance.now();
-        const idleSpeed = 0.12; // rad/sec — медленное плавное вращение
+        const idleSpeed = 0.15;
         let userInteracting = false;
         let interactionTimeout = null;
-        let loadedModel = null; // ссылка на загруженную модель
 
-        // Отслеживание взаимодействия пользователя
         controls.addEventListener("start", () => {
             userInteracting = true;
             if (interactionTimeout) clearTimeout(interactionTimeout);
@@ -483,10 +681,69 @@
             const delta = (now - lastTime) / 1000;
             lastTime = now;
 
-            // Авто-вращение модели, если пользователь не взаимодействует
-            if (!userInteracting && loadedModel) {
-                loadedModel.rotation.y += idleSpeed * delta;
+            // Auto rotate trophy
+            if (!userInteracting && trophyGroup) {
+                trophyGroup.rotation.y += idleSpeed * delta;
             }
+
+            // Animate ring glow
+            ring.material.opacity = 0.4 + Math.sin(now * 0.003) * 0.2;
+
+            // Animate inner/outer rings
+            if (innerRing) innerRing.material.opacity = 0.1 + Math.sin(now * 0.002) * 0.05;
+            if (outerRing) outerRing.material.opacity = 0.08 + Math.sin(now * 0.0025) * 0.04;
+
+            // Slowly rotate outer text
+            if (outerText) outerText.rotation.y += 0.0002;
+
+            // Animate particles
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3 + 1] -= particleSpeeds[i];
+                if (positions[i * 3 + 1] < 0.3) {
+                    positions[i * 3 + 1] = 5.5;
+                    positions[i * 3] = (Math.random() - 0.5) * 6;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+                }
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            // Raycasting for hover
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                while (obj.parent && !obj.userData.link) {
+                    obj = obj.parent;
+                }
+                if (obj.userData.link) {
+                    hoveredObject = obj;
+                    document.body.style.cursor = 'pointer';
+                    
+                    // Show label
+                    const vector = new THREE.Vector3(0, 2.3, 0);
+                    vector.applyMatrix4(obj.matrixWorld);
+                    vector.project(camera);
+                    
+                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+                    
+                    trophyLabel.style.left = x + 'px';
+                    trophyLabel.style.top = (y - 80) + 'px';
+                    trophyLabel.style.transform = 'translateX(-50%)';
+                    trophyLabel.classList.add('visible');
+                } else {
+                    hoveredObject = null;
+                    document.body.style.cursor = 'grab';
+                    trophyLabel.classList.remove('visible');
+                }
+            } else {
+                hoveredObject = null;
+                document.body.style.cursor = 'grab';
+                trophyLabel.classList.remove('visible');
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }

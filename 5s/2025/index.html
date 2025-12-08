@@ -2,10 +2,426 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Кубок 5s 2025</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>3D Кубок Победителя — 5S 2025</title>
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 20% 20%, #1b2340 0%, #0d1226 35%, #070912 100%);
+            --panel: rgba(19, 24, 43, 0.6);
+            --text: #e8ecf2;
+            --accent: #f7d046;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+        .layout {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #scene {
+            position: absolute;
+            inset: 0;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        .overlay {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 20px 28px;
+            border-radius: 16px;
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            max-width: 400px;
+            text-align: center;
+        }
+        .overlay h1 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            line-height: 1.3;
+        }
+        .overlay p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #c7d0dd;
+            line-height: 1.4;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            margin-top: 14px;
+            border-radius: 12px;
+            background: rgba(247, 208, 70, 0.18);
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .hud {
+            position: absolute;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: rgba(12, 15, 28, 0.75);
+            color: #dbe4f5;
+            font-size: 13px;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+        .key {
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+        }
+        .back-link {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .back-link:hover {
+            background: rgba(247, 208, 70, 0.2);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        .back-link svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Rotation hint arrows */
+        .rotation-hint {
+            position: absolute;
+            bottom: 260px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            opacity: 0.7;
+            animation: pulseHint 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .rotation-hint .arrow {
+            font-size: 32px;
+            color: var(--accent);
+            text-shadow: 0 0 15px rgba(247, 208, 70, 0.6), 0 0 30px rgba(247, 208, 70, 0.3);
+            animation: floatArrow 1.5s ease-in-out infinite;
+        }
+        .rotation-hint .arrow.left {
+            animation-delay: 0s;
+        }
+        .rotation-hint .arrow.right {
+            animation-delay: 0.75s;
+        }
+        .rotation-hint .hint-text {
+            font-size: 12px;
+            color: #c7d0dd;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.9; }
+        }
+        @keyframes floatArrow {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-8px); }
+        }
+        .rotation-hint .arrow.right {
+            animation-name: floatArrowRight;
+        }
+        @keyframes floatArrowRight {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(8px); }
+        }
+
+        @media (max-width: 768px) {
+            .back-link {
+                top: 16px;
+                left: 16px;
+                padding: 10px 14px;
+                font-size: 12px;
+            }
+            .rotation-hint {
+                bottom: 220px;
+                gap: 40px;
+            }
+            .rotation-hint .arrow {
+                font-size: 24px;
+            }
+            .rotation-hint .hint-text {
+                font-size: 10px;
+            }
+            .overlay {
+                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+                left: 50%;
+                transform: translateX(-50%);
+                width: calc(100vw - 32px);
+                max-width: none;
+                max-height: calc(100vh - 160px - env(safe-area-inset-bottom, 0px));
+                padding: 14px 16px;
+                border-radius: 12px;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            .overlay h1 { 
+                font-size: 14px; 
+                margin-bottom: 8px;
+                line-height: 1.3;
+            }
+            .overlay p { 
+                font-size: 12px; 
+                margin: 4px 0;
+            }
+            .badge { 
+                font-size: 18px; 
+                padding: 10px 16px; 
+                margin-top: 10px;
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Кубок 5s — 2025</h1>
-    <p>Добро пожаловать на страницу кубка 2025 года!</p>
+    <div class="layout">
+        <a href="../../" class="back-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            К витрине
+        </a>
+        <div id="scene"></div>
+        <div class="rotation-hint">
+            <span class="arrow left">◀</span>
+            <span class="hint-text">вращайте</span>
+            <span class="arrow right">▶</span>
+        </div>
+        <div class="overlay">
+<h1>«Ең үздік бөлімше» номинациясының<br>жеңімпазы</h1>
+            <div class="badge">"АКУ"</div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+        import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+        const container = document.getElementById("scene");
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.setClearColor(0x0a1020, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.8;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        container.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(isMobile ? 55 : 50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, isMobile ? 1.4 : 1.6, isMobile ? 3.0 : 3.4);
+        camera.lookAt(0, 0.5, 0);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = isMobile ? 1.0 : 1.3;
+        controls.maxDistance = isMobile ? 4.5 : 6;
+        controls.maxPolarAngle = Math.PI / 2;
+        controls.enablePan = false;
+        controls.target.set(0, 0.5, 0);
+        controls.update();
+
+        // ==================== ОСВЕЩЕНИЕ ====================
+        const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambient);
+
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 1.0);
+        scene.add(hemi);
+
+        const modelCenter = new THREE.Object3D();
+        modelCenter.position.set(0, 0.8, 0);
+        scene.add(modelCenter);
+
+        const keyLight = new THREE.SpotLight(0xffffff, 80);
+        keyLight.position.set(-3, 4, 3);
+        keyLight.target = modelCenter;
+        keyLight.angle = Math.PI / 3;
+        keyLight.penumbra = 0.5;
+        keyLight.decay = 1;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.SpotLight(0xe0f0ff, 60);
+        fillLight.position.set(3, 3.5, 2.5);
+        fillLight.target = modelCenter;
+        fillLight.angle = Math.PI / 3;
+        fillLight.penumbra = 0.6;
+        fillLight.decay = 1;
+        scene.add(fillLight);
+
+        const rimLight = new THREE.SpotLight(0xffeedd, 50);
+        rimLight.position.set(0, 5, -3);
+        rimLight.target = modelCenter;
+        rimLight.angle = Math.PI / 2.5;
+        rimLight.penumbra = 0.4;
+        rimLight.decay = 1;
+        scene.add(rimLight);
+
+        const frontLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        frontLight.position.set(0, 2, 5);
+        scene.add(frontLight);
+
+        const bottomLight = new THREE.PointLight(0xaaccff, 40, 8);
+        bottomLight.position.set(0, -0.5, 0);
+        scene.add(bottomLight);
+
+        const trophyPlaceholder = new THREE.Group();
+        scene.add(trophyPlaceholder);
+
+        const loader = new GLTFLoader();
+        loader.load(
+            "./cup-aku.glb",
+            (gltf) => {
+                const model = gltf.scene;
+                const box = new THREE.Box3().setFromObject(model);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const maxDim = Math.max(size.x, size.y, size.z) || 1;
+                const scale = 1.6 / maxDim;
+                model.scale.setScalar(scale);
+
+                const center = new THREE.Vector3();
+                box.getCenter(center);
+                model.position.sub(center.multiplyScalar(scale));
+                model.position.y += (size.y * scale) / 2 + 0.05;
+
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if (child.material) {
+                            child.material = child.material.clone();
+                            if (child.material.roughness !== undefined) {
+                                child.material.roughness = Math.max(0.02, child.material.roughness * 0.4);
+                            }
+                            if (child.material.metalness !== undefined) {
+                                child.material.metalness = Math.min(1, child.material.metalness + 0.3);
+                            }
+                            if (child.material.emissive !== undefined) {
+                                child.material.emissive = new THREE.Color(0x222222);
+                                child.material.emissiveIntensity = 0.15;
+                            }
+                            if (child.material.transparent && child.material.opacity < 0.3) {
+                                child.material.opacity = 0.6;
+                            }
+                            child.material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                model.name = "GLB_Trophy";
+
+                const trophyGroup = new THREE.Group();
+                trophyGroup.add(model);
+                scene.add(trophyGroup);
+                trophyPlaceholder.visible = false;
+                loadedModel = trophyGroup;
+            },
+            undefined,
+            (err) => {
+                console.warn("GLB load error", err);
+            }
+        );
+
+        let lastTime = performance.now();
+        const idleSpeed = 0.12;
+        let userInteracting = false;
+        let interactionTimeout = null;
+        let loadedModel = null;
+
+        controls.addEventListener("start", () => {
+            userInteracting = true;
+            if (interactionTimeout) clearTimeout(interactionTimeout);
+        });
+        controls.addEventListener("end", () => {
+            interactionTimeout = setTimeout(() => { userInteracting = false; }, 2000);
+        });
+
+        function resize() {
+            const { innerWidth: w, innerHeight: h } = window;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const delta = (now - lastTime) / 1000;
+            lastTime = now;
+
+            if (!userInteracting && loadedModel) {
+                loadedModel.rotation.y += idleSpeed * delta;
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener("resize", resize);
+        resize();
+        animate();
+    </script>
 </body>
 </html>
