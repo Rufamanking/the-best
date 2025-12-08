@@ -96,7 +96,66 @@
             font-weight: 600;
         }
 
+        /* Rotation hint arrows */
+        .rotation-hint {
+            position: absolute;
+            bottom: 260px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            opacity: 0.7;
+            animation: pulseHint 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .rotation-hint .arrow {
+            font-size: 32px;
+            color: var(--accent);
+            text-shadow: 0 0 15px rgba(247, 208, 70, 0.6), 0 0 30px rgba(247, 208, 70, 0.3);
+            animation: floatArrow 1.5s ease-in-out infinite;
+        }
+        .rotation-hint .arrow.left {
+            animation-delay: 0s;
+        }
+        .rotation-hint .arrow.right {
+            animation-delay: 0.75s;
+        }
+        .rotation-hint .hint-text {
+            font-size: 12px;
+            color: #c7d0dd;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.9; }
+        }
+        @keyframes floatArrow {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-8px); }
+        }
+        .rotation-hint .arrow.right {
+            animation-name: floatArrowRight;
+        }
+        @keyframes floatArrowRight {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(8px); }
+        }
+
         @media (max-width: 768px) {
+            .rotation-hint {
+                bottom: 220px;
+                gap: 40px;
+            }
+            .rotation-hint .arrow {
+                font-size: 24px;
+            }
+            .rotation-hint .hint-text {
+                font-size: 10px;
+            }
             .overlay {
                 bottom: calc(80px + env(safe-area-inset-bottom, 0px));
                 left: 50%;
@@ -131,9 +190,14 @@
 <body>
     <div class="layout">
         <div id="scene"></div>
+        <div class="rotation-hint">
+            <span class="arrow left">◀</span>
+            <span class="hint-text">вращайте</span>
+            <span class="arrow right">▶</span>
+        </div>
         <div class="overlay">
             <h1>Победитель в номинации<br>лучшее подразделение</h1>
-            <div class="badge">АТУ</div>
+            <div class="badge">"Участок"</div>
         </div>
     </div>
 
@@ -178,6 +242,7 @@
         controls.minDistance = isMobile ? 1.0 : 1.3;
         controls.maxDistance = isMobile ? 4.5 : 6;
         controls.maxPolarAngle = Math.PI / 2;
+        controls.enablePan = false; // Отключаем перемещение камеры
         controls.target.set(0, 0.5, 0);
         controls.update();
 
@@ -323,7 +388,7 @@
                 ctx.font = "bold 58px Arial, sans-serif";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText("АТУ", canvas.width / 2, canvas.height / 2);
+                ctx.fillText("Участок", canvas.width / 2, canvas.height / 2);
                 ctx.shadowColor = "transparent";
 
                 const plateTexture = new THREE.CanvasTexture(canvas);
