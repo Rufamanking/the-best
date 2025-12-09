@@ -330,6 +330,8 @@
         const trophyPlaceholder = new THREE.Group();
         scene.add(trophyPlaceholder);
 
+        let mixer = null; // AnimationMixer для воспроизведения анимаций из GLB
+
         const loader = new GLTFLoader();
         loader.load(
             "./cup-akb.glb",
@@ -378,6 +380,23 @@
                 scene.add(trophyGroup);
                 trophyPlaceholder.visible = false;
                 loadedModel = trophyGroup;
+
+                // ==================== ВОСПРОИЗВЕДЕНИЕ АНИМАЦИЙ ====================
+                // Проверяем наличие анимаций в GLB файле
+                if (gltf.animations && gltf.animations.length > 0) {
+                    // Создаём AnimationMixer для модели
+                    mixer = new THREE.AnimationMixer(model);
+                    
+                    // Воспроизводим все анимации
+                    gltf.animations.forEach((clip) => {
+                        const action = mixer.clipAction(clip);
+                        action.play(); // Запускаем анимацию
+                    });
+                    
+                    console.log(`Загружено анимаций: ${gltf.animations.length}`);
+                } else {
+                    console.log("Анимации в модели не найдены");
+                }
             },
             undefined,
             (err) => {
@@ -411,6 +430,11 @@
             const now = performance.now();
             const delta = (now - lastTime) / 1000;
             lastTime = now;
+
+            // Обновляем анимации модели (если есть)
+            if (mixer) {
+                mixer.update(delta);
+            }
 
             if (!userInteracting && loadedModel) {
                 loadedModel.rotation.y += idleSpeed * delta;

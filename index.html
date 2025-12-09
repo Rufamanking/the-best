@@ -557,6 +557,7 @@
         let trophyGroup = null;
         let trophy2025 = null;
         const clickableObjects = [];
+        let mixer = null; // AnimationMixer для воспроизведения анимаций из GLB
 
         const loader = new GLTFLoader();
         loader.load(
@@ -610,6 +611,23 @@
                 
                 trophy2025 = trophyGroup;
                 clickableObjects.push(trophyGroup);
+
+                // ==================== ВОСПРОИЗВЕДЕНИЕ АНИМАЦИЙ ====================
+                // Проверяем наличие анимаций в GLB файле
+                if (gltf.animations && gltf.animations.length > 0) {
+                    // Создаём AnimationMixer для модели
+                    mixer = new THREE.AnimationMixer(model);
+                    
+                    // Воспроизводим все анимации
+                    gltf.animations.forEach((clip) => {
+                        const action = mixer.clipAction(clip);
+                        action.play(); // Запускаем анимацию
+                    });
+                    
+                    console.log(`Загружено анимаций: ${gltf.animations.length}`);
+                } else {
+                    console.log("Анимации в модели не найдены");
+                }
             },
             undefined,
             (err) => console.warn("GLB load error", err)
@@ -680,6 +698,11 @@
             const now = performance.now();
             const delta = (now - lastTime) / 1000;
             lastTime = now;
+
+            // Обновляем анимации модели (если есть)
+            if (mixer) {
+                mixer.update(delta);
+            }
 
             // Auto rotate trophy
             if (!userInteracting && trophyGroup) {
