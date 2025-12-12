@@ -390,9 +390,8 @@
             const totalChars = chars.length;
             const anglePerChar = (Math.PI * 2) / totalChars;
             
-            // Reuse geometry and material where possible
+            // Create geometry for each mesh to avoid transformation issues
             const size = fontSize * 0.011;
-            const geometry = new THREE.PlaneGeometry(size, size);
             
             chars.forEach((char, i) => {
                 // Calculate position on circle
@@ -409,6 +408,8 @@
                     depthWrite: false
                 });
                 
+                // Create individual geometry for each mesh to avoid transformation issues
+                const geometry = new THREE.PlaneGeometry(size, size);
                 const plane = new THREE.Mesh(geometry, material);
                 
                 // Position on floor
@@ -574,10 +575,10 @@
             const coneMaterial = new THREE.MeshBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.03, // Reduced opacity for less overdraw
+                opacity: 0.03, // Reduced opacity
                 side: THREE.DoubleSide,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending
+                depthWrite: false
+                // Using default NormalBlending for better performance
             });
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             
@@ -773,13 +774,11 @@
             renderer.setSize(w, h);
         }
 
-        let frameCount = 0;
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
             const delta = (now - lastTime) / 1000;
             lastTime = now;
-            frameCount++;
 
             // Обновляем анимации модели (если есть)
             if (mixer) {
@@ -794,8 +793,9 @@
             // Animate ring glow
             ring.material.opacity = 0.4 + Math.sin(now * 0.003) * 0.2;
 
-            // Animate inner/outer rings (less frequently)
-            if (frameCount % 2 === 0) {
+            // Animate inner/outer rings with time-based interval
+            const timeSinceLastRingUpdate = now % 100; // Update approximately every 100ms
+            if (timeSinceLastRingUpdate < delta * 1000) {
                 if (innerRing) innerRing.material.opacity = 0.1 + Math.sin(now * 0.002) * 0.05;
                 if (outerRing) outerRing.material.opacity = 0.08 + Math.sin(now * 0.0025) * 0.04;
             }
