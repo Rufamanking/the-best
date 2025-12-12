@@ -225,16 +225,60 @@
         import { OrbitControls } from "three/addons/controls/OrbitControls.js";
         import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
+        // ==================== CONSTANTS ====================
+        const CONFIG = {
+            mobile: {
+                pixelRatio: 1.25,
+                shadowMapSize: 512,
+                particleCount: 50,
+                cameraFov: 50
+            },
+            desktop: {
+                pixelRatio: 1.5,
+                shadowMapSize: 1024,
+                particleCount: 100,
+                cameraFov: 45
+            },
+            scene: {
+                fogNear: 8,
+                fogFar: 25,
+                clearColor: 0x070912
+            },
+            camera: {
+                near: 0.1,
+                far: 100,
+                positionY: 3,
+                positionZ: 7
+            },
+            controls: {
+                dampingFactor: 0.08,
+                minDistance: 3,
+                maxDistance: 15,
+                maxPolarAngle: Math.PI / 2.1,
+                minPolarAngle: Math.PI / 6
+            },
+            animation: {
+                idleSpeed: 0.15,
+                interactionTimeout: 2000
+            }
+        };
+
         const container = document.getElementById("scene");
         const trophyLabel = document.getElementById("trophyLabel");
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         const isMobile = window.matchMedia("(max-width: 768px)").matches;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
+        const deviceConfig = isMobile ? CONFIG.mobile : CONFIG.desktop;
+
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, deviceConfig.pixelRatio));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.setClearColor(0x070912, 1);
+        renderer.setClearColor(CONFIG.scene.clearColor, 1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.6;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -243,26 +287,31 @@
         const scene = new THREE.Scene();
 
         // Fog for atmosphere
-        scene.fog = new THREE.Fog(0x070912, 8, 25);
+        scene.fog = new THREE.Fog(CONFIG.scene.clearColor, CONFIG.scene.fogNear, CONFIG.scene.fogFar);
 
-        const camera = new THREE.PerspectiveCamera(isMobile ? 50 : 45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 3, 7);
+        const camera = new THREE.PerspectiveCamera(
+            deviceConfig.cameraFov, 
+            window.innerWidth / window.innerHeight, 
+            CONFIG.camera.near, 
+            CONFIG.camera.far
+        );
+        camera.position.set(0, CONFIG.camera.positionY, CONFIG.camera.positionZ);
         camera.lookAt(0, 0, 0);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.08;
-        controls.minDistance = 3;
-        controls.maxDistance = 15;
-        controls.maxPolarAngle = Math.PI / 2.1;
-        controls.minPolarAngle = Math.PI / 6;
+        controls.dampingFactor = CONFIG.controls.dampingFactor;
+        controls.minDistance = CONFIG.controls.minDistance;
+        controls.maxDistance = CONFIG.controls.maxDistance;
+        controls.maxPolarAngle = CONFIG.controls.maxPolarAngle;
+        controls.minPolarAngle = CONFIG.controls.minPolarAngle;
         controls.enablePan = false;
         controls.target.set(0, 1, 0);
         controls.update();
 
         // ==================== FLOOR / PEDESTAL ====================
-        // Main floor
-        const floorGeometry = new THREE.CircleGeometry(12, 64);
+        // Main floor - reduced segments for better performance
+        const floorGeometry = new THREE.CircleGeometry(12, 48); // Reduced from 64 to 48
         const floorMaterial = new THREE.MeshStandardMaterial({
             color: 0x0a0e1a,
             roughness: 0.8,
@@ -274,8 +323,8 @@
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // Showcase pedestal
-        const pedestalGeometry = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 64);
+        // Showcase pedestal - reduced segments
+        const pedestalGeometry = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 48); // Reduced from 64 to 48
         const pedestalMaterial = new THREE.MeshPhysicalMaterial({
             color: 0x1a1f35,
             roughness: 0.3,
@@ -289,8 +338,8 @@
         pedestal.castShadow = true;
         scene.add(pedestal);
 
-        // Glowing ring on pedestal
-        const ringGeometry = new THREE.TorusGeometry(1.25, 0.02, 16, 100);
+        // Glowing ring on pedestal - reduced segments
+        const ringGeometry = new THREE.TorusGeometry(1.25, 0.02, 12, 80); // Reduced from 16,100 to 12,80
         const ringMaterial = new THREE.MeshBasicMaterial({
             color: 0xf7d046,
             transparent: true,
@@ -303,11 +352,47 @@
 
         // ==================== CIRCULAR TEXT ON FLOOR ====================
         // Create text that follows a circle on the floor
+        // Optimized: Reuse canvas context and reduce texture updates
+        const textureCache = new Map();
+        
+        function createCharTexture(char, fontSize, color) {
+            const key = `${char}_${fontSize}_${color}`;
+            if (textureCache.has(key)) {
+                return textureCache.get(key);
+            }
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; // Reduced from 128 for better performance
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d', { willReadFrequently: false });
+            
+            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Glow
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = color;
+            ctx.fillText(char, 32, 32);
+            ctx.shadowBlur = 6;
+            ctx.fillText(char, 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            textureCache.set(key, texture);
+            return texture;
+        }
+        
         function createCircularFloorText(text, radius, fontSize, color, y = 0.02) {
             const group = new THREE.Group();
             const chars = text.split('');
             const totalChars = chars.length;
             const anglePerChar = (Math.PI * 2) / totalChars;
+            
+            // Reuse geometry and material where possible
+            const size = fontSize * 0.011;
+            const geometry = new THREE.PlaneGeometry(size, size);
             
             chars.forEach((char, i) => {
                 // Calculate position on circle
@@ -315,28 +400,7 @@
                 const x = Math.cos(angle) * radius;
                 const z = Math.sin(angle) * radius;
                 
-                // Create canvas for character
-                const canvas = document.createElement('canvas');
-                canvas.width = 128;
-                canvas.height = 128;
-                const ctx = canvas.getContext('2d');
-                
-                // Clear
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                // Glow
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 15;
-                ctx.fillStyle = color;
-                ctx.fillText(char, 64, 64);
-                ctx.shadowBlur = 8;
-                ctx.fillText(char, 64, 64);
-                
-                const texture = new THREE.CanvasTexture(canvas);
+                const texture = createCharTexture(char, fontSize, color);
                 const material = new THREE.MeshBasicMaterial({
                     map: texture,
                     transparent: true,
@@ -345,11 +409,7 @@
                     depthWrite: false
                 });
                 
-                const size = fontSize * 0.011;
-                const plane = new THREE.Mesh(
-                    new THREE.PlaneGeometry(size, size),
-                    material
-                );
+                const plane = new THREE.Mesh(geometry, material);
                 
                 // Position on floor
                 plane.position.set(x, y, z);
@@ -382,8 +442,8 @@
         });
         scene.add(outerText);
 
-        // Inner glow ring
-        const innerRingGeo = new THREE.RingGeometry(1.9, 2.0, 64);
+        // Inner glow ring - reduced segments
+        const innerRingGeo = new THREE.RingGeometry(1.9, 2.0, 48); // Reduced from 64 to 48
         const innerRingMat = new THREE.MeshBasicMaterial({
             color: 0xf7d046,
             transparent: true,
@@ -395,8 +455,8 @@
         innerRing.position.y = 0.01;
         scene.add(innerRing);
 
-        // Outer glow ring
-        const outerRingGeo = new THREE.RingGeometry(2.6, 2.7, 64);
+        // Outer glow ring - reduced segments
+        const outerRingGeo = new THREE.RingGeometry(2.6, 2.7, 48); // Reduced from 64 to 48
         const outerRingMat = new THREE.MeshBasicMaterial({
             color: 0xf7d046,
             transparent: true,
@@ -465,12 +525,13 @@
         spot1.penumbra = 0.5;
         spot1.decay = 1.5;
         spot1.castShadow = true;
-        spot1.shadow.mapSize.width = 1024;
-        spot1.shadow.mapSize.height = 1024;
+        spot1.shadow.mapSize.width = deviceConfig.shadowMapSize;
+        spot1.shadow.mapSize.height = deviceConfig.shadowMapSize;
+        spot1.shadow.bias = -0.0001;
         scene.add(spot1);
         scene.add(spot1.target);
 
-        // Spotlight 2 - center (bright white)
+        // Spotlight 2 - center (bright white) - main shadow caster
         const spot2 = new THREE.SpotLight(0xffffff, 120);
         spot2.position.set(0, 6, 4);
         spot2.target.position.set(0, 0.5, 0);
@@ -478,19 +539,20 @@
         spot2.penumbra = 0.4;
         spot2.decay = 1.5;
         spot2.castShadow = true;
-        spot2.shadow.mapSize.width = 1024;
-        spot2.shadow.mapSize.height = 1024;
+        spot2.shadow.mapSize.width = deviceConfig.shadowMapSize;
+        spot2.shadow.mapSize.height = deviceConfig.shadowMapSize;
+        spot2.shadow.bias = -0.0001;
         scene.add(spot2);
         scene.add(spot2.target);
 
-        // Spotlight 3 - right front (cool)
+        // Spotlight 3 - right front (cool) - no shadow for performance
         const spot3 = new THREE.SpotLight(0xe0f0ff, 80);
         spot3.position.set(3, 5.5, 3);
         spot3.target.position.set(0, 0.5, 0);
         spot3.angle = Math.PI / 6;
         spot3.penumbra = 0.5;
         spot3.decay = 1.5;
-        spot3.castShadow = true;
+        spot3.castShadow = false; // Disabled for performance
         scene.add(spot3);
         scene.add(spot3.target);
 
@@ -503,18 +565,19 @@
         scene.add(rimLight);
         scene.add(rimLight.target);
 
-        // Volumetric light cones (visual)
+        // Volumetric light cones (visual) - Optimized: reduced segments
         function createLightCone(position, target, color) {
             const direction = new THREE.Vector3().subVectors(target, position).normalize();
             const length = position.distanceTo(target);
             
-            const coneGeometry = new THREE.ConeGeometry(1.2, length, 32, 1, true);
+            const coneGeometry = new THREE.ConeGeometry(1.2, length, 16, 1, true); // Reduced from 32 to 16
             const coneMaterial = new THREE.MeshBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.04,
+                opacity: 0.03, // Reduced opacity for less overdraw
                 side: THREE.DoubleSide,
-                depthWrite: false
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
             });
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             
@@ -530,7 +593,7 @@
         scene.add(cone1, cone2, cone3);
 
         // ==================== DUST PARTICLES ====================
-        const particleCount = 100;
+        const particleCount = deviceConfig.particleCount;
         const particleGeometry = new THREE.BufferGeometry();
         const particlePositions = new Float32Array(particleCount * 3);
         const particleSpeeds = [];
@@ -637,10 +700,25 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let hoveredObject = null;
+        let needsRaycast = false;
+        let mouseMoveDelta = 0;
+        const RAYCAST_THRESHOLD = 0.01; // Only raycast if mouse moved enough
 
         function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            const newX = (event.clientX / window.innerWidth) * 2 - 1;
+            const newY = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Only mark for raycast if mouse moved significantly
+            const deltaX = Math.abs(newX - mouse.x);
+            const deltaY = Math.abs(newY - mouse.y);
+            
+            mouse.x = newX;
+            mouse.y = newY;
+            
+            if (deltaX > RAYCAST_THRESHOLD || deltaY > RAYCAST_THRESHOLD) {
+                needsRaycast = true;
+                mouseMoveDelta = deltaX + deltaY;
+            }
         }
 
         function onClick(event) {
@@ -674,7 +752,7 @@
 
         // ==================== ANIMATION ====================
         let lastTime = performance.now();
-        const idleSpeed = 0.15;
+        const idleSpeed = CONFIG.animation.idleSpeed;
         let userInteracting = false;
         let interactionTimeout = null;
 
@@ -683,7 +761,9 @@
             if (interactionTimeout) clearTimeout(interactionTimeout);
         });
         controls.addEventListener("end", () => {
-            interactionTimeout = setTimeout(() => { userInteracting = false; }, 2000);
+            interactionTimeout = setTimeout(() => { 
+                userInteracting = false; 
+            }, CONFIG.animation.interactionTimeout);
         });
 
         function resize() {
@@ -693,11 +773,13 @@
             renderer.setSize(w, h);
         }
 
+        let frameCount = 0;
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
             const delta = (now - lastTime) / 1000;
             lastTime = now;
+            frameCount++;
 
             // Обновляем анимации модели (если есть)
             if (mixer) {
@@ -712,9 +794,11 @@
             // Animate ring glow
             ring.material.opacity = 0.4 + Math.sin(now * 0.003) * 0.2;
 
-            // Animate inner/outer rings
-            if (innerRing) innerRing.material.opacity = 0.1 + Math.sin(now * 0.002) * 0.05;
-            if (outerRing) outerRing.material.opacity = 0.08 + Math.sin(now * 0.0025) * 0.04;
+            // Animate inner/outer rings (less frequently)
+            if (frameCount % 2 === 0) {
+                if (innerRing) innerRing.material.opacity = 0.1 + Math.sin(now * 0.002) * 0.05;
+                if (outerRing) outerRing.material.opacity = 0.08 + Math.sin(now * 0.0025) * 0.04;
+            }
 
             // Slowly rotate outer text
             if (outerText) outerText.rotation.y += 0.0002;
@@ -731,40 +815,44 @@
             }
             particles.geometry.attributes.position.needsUpdate = true;
 
-            // Raycasting for hover
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(clickableObjects, true);
+            // Raycasting for hover - only when mouse moved and has clickable objects
+            if (needsRaycast && clickableObjects.length > 0) {
+                needsRaycast = false;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(clickableObjects, true);
 
-            if (intersects.length > 0) {
-                let obj = intersects[0].object;
-                while (obj.parent && !obj.userData.link) {
-                    obj = obj.parent;
-                }
-                if (obj.userData.link) {
-                    hoveredObject = obj;
-                    document.body.style.cursor = 'pointer';
-                    
-                    // Show label
-                    const vector = new THREE.Vector3(0, 2.3, 0);
-                    vector.applyMatrix4(obj.matrixWorld);
-                    vector.project(camera);
-                    
-                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
-                    
-                    trophyLabel.style.left = x + 'px';
-                    trophyLabel.style.top = (y - 80) + 'px';
-                    trophyLabel.style.transform = 'translateX(-50%)';
-                    trophyLabel.classList.add('visible');
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj.parent && !obj.userData.link) {
+                        obj = obj.parent;
+                    }
+                    if (obj.userData.link) {
+                        hoveredObject = obj;
+                        document.body.style.cursor = 'pointer';
+                        
+                        // Show label
+                        const vector = new THREE.Vector3(0, 2.3, 0);
+                        vector.applyMatrix4(obj.matrixWorld);
+                        vector.project(camera);
+                        
+                        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                        const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+                        
+                        trophyLabel.style.left = x + 'px';
+                        trophyLabel.style.top = (y - 80) + 'px';
+                        trophyLabel.style.transform = 'translateX(-50%)';
+                        trophyLabel.classList.add('visible');
+                    } else {
+                        hoveredObject = null;
+                        document.body.style.cursor = 'grab';
+                        trophyLabel.classList.remove('visible');
+                    }
                 } else {
                     hoveredObject = null;
                     document.body.style.cursor = 'grab';
                     trophyLabel.classList.remove('visible');
                 }
-            } else {
-                hoveredObject = null;
-                document.body.style.cursor = 'grab';
-                trophyLabel.classList.remove('visible');
             }
 
             controls.update();
